@@ -48,7 +48,17 @@ docker rm devops-flask
 
 ## 4. Diagnose why the app cannot be reached
 
-The supplied Flask app already binds to `0.0.0.0:5000`. An exact finding for the teammate's setup requires their Dockerfile and run command. Use these checks to identify which problem applies.
+The assignment's broken example has three problems. The first two prevent the image from building. The third prevents host requests from reaching Flask once the image runs.
+
+| Problem in the assignment | Fix in this project |
+| --- | --- |
+| `FORM python:3.12-slim` is an invalid Dockerfile instruction. | Use `FROM python:3.12-slim`. |
+| `pip install -r requirement.txt` asks for a file with the wrong name. | Copy `requirements.txt` and install from it with `python -m pip install --no-cache-dir -r requirements.txt`. |
+| `-p 5000:8080` forwards host port 5000 to container port 8080. Flask listens on port 5000. | Use `-p 127.0.0.1:5000:5000` to forward host port 5000 to container port 5000. |
+
+### Additional troubleshooting
+
+If the corrected container is still unreachable, check its state, startup logs, and port mapping.
 
 ```bash
 docker ps -a --filter name=devops-flask
@@ -72,13 +82,19 @@ Create a second empty GitHub repository named `assignment-2-docker-ci`. Use visi
 
 ```bash
 git init -b main
-git add README.md app.py requirements.txt Dockerfile .github/workflows/build.yml docs/screenshots/docker-health-check.png
+git add README.md app.py requirements.txt Dockerfile .dockerignore .github/workflows/build.yml docs/screenshots/docker-health-check.png
 git diff --cached --name-only
 git commit -m "Dockerize Flask app and build it on every push"
 git remote add origin https://github.com/YOUR-USERNAME/assignment-2-docker-ci.git
 git push -u origin main
 ```
 
-The `push` trigger has no branch or path filters. The workflow checks out the pushed commit, then runs `docker build -t devops-flask:ci .` on a GitHub-hosted Ubuntu runner. The image is built on the runner. [GitHub push event](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push)
+The `push` trigger has no branch or path filters. The workflow checks out the pushed commit, then runs `docker build -t devops-flask:ci .` on a GitHub-hosted Ubuntu runner. The runner then starts a container, checks that `/health` returns HTTP `200` with `status` set to `ok`, and verifies the container runs with a non-zero user ID. A final step prints the container logs and removes it, including after a failed check. [GitHub push event](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows#push)
 
-**Checkpoint:** `git diff --cached --name-only` lists `.github/workflows/build.yml` before the commit. After pushing, open **Actions → Build Docker image → build** on GitHub. Confirm the run matches your commit and both **Check out repository** and **Build image** are green.
+**Checkpoint:** `git diff --cached --name-only` lists `.github/workflows/build.yml` before the commit. After pushing, open **Actions → Build Docker image → build** on GitHub. Confirm the run matches your commit and **Check out repository**, **Build image**, and **Smoke-test /health** are green.
+
+## 6. Bonus checks
+
+- `.dockerignore` keeps Git metadata, documentation, and common Python caches out of the Docker build context.
+- `USER app` runs Flask as the dedicated non-root user. While the local container is running, `docker exec devops-flask id -u` should print a non-zero user ID.
+- The workflow's **Smoke-test /health** step checks the image built on that push. Open the step log to see the HTTP status and response body.
