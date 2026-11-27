@@ -2,13 +2,18 @@
 
 This repository includes the assignment's Flask app, its dependency file, a Dockerfile, and a workflow at `.github/workflows/build.yml`. Start in the folder containing this README.
 
-## 1. Check Docker
+## 1. Extract the ZIP and start Docker
 
-```bash
+1. On GitHub, select **Code → Download ZIP** and extract the archive. Open a terminal in the extracted folder that directly contains `Dockerfile`, `app.py`, and this README. If extraction creates two nested folders with the same name, use the inner one.
+2. On Windows, install Docker Desktop if needed, open it, and wait for the Linux engine to start. If Docker Desktop is in Windows container mode, switch to **Linux containers**. [Install Docker Desktop on Windows](https://docs.docker.com/desktop/setup/install/windows-install/)
+3. Use PowerShell or Ubuntu on WSL 2. If you choose Ubuntu, open Docker Desktop → **Settings → Resources → WSL Integration**, enable your Ubuntu distribution, and apply the change. [Docker Desktop WSL integration](https://docs.docker.com/desktop/features/wsl/#enable-docker-in-a-wsl-2-distribution)
+4. In the terminal you’ll use for the build, check that Docker can reach its engine.
+
+```text
 docker version
 ```
 
-**Checkpoint:** The output includes both a Client and a Server section. On Windows with WSL, start Docker Desktop and enable integration for your Ubuntu distribution. [Docker Desktop WSL integration](https://docs.docker.com/desktop/features/wsl/)
+**Checkpoint:** The output shows both **Client** and **Server**. If the Server section is missing or the error mentions `dockerDesktopLinuxEngine`, check that Docker Desktop is running in Linux container mode. If you are using Ubuntu, also check WSL integration. Retry `docker version` before building.
 
 ## 2. Build the image
 
@@ -23,12 +28,23 @@ The Dockerfile sets `/app` as the working directory, installs Flask from `requir
 
 ## 3. Run the container and verify the endpoints
 
-```bash
+```text
 docker run -d --name devops-flask -p 127.0.0.1:5000:5000 devops-flask:local
 docker ps --filter name=devops-flask
+```
+
+In **Ubuntu/WSL**, run:
+
+```bash
 curl -i http://localhost:5000/health
 curl -fsS http://localhost:5000/
-printf '\n'
+```
+
+In **Windows PowerShell**, use `curl.exe`:
+
+```powershell
+curl.exe -i http://localhost:5000/health
+curl.exe -fsS http://localhost:5000/
 ```
 
 **Checkpoint:** The container is `Up`, Docker shows `127.0.0.1:5000->5000/tcp`, `/health` returns HTTP `200` with `{"status":"ok"}`, and `/` returns `Hello from DevOps!`. If you query immediately after starting the container and the app is still starting up, try the curl command again after a few seconds.
@@ -76,9 +92,11 @@ docker port devops-flask
 | Host port 5000 is already in use | `docker run` reports a port allocation or bind error. | Free host port 5000 and recreate the container. To verify temporarily on another port, use `-p 127.0.0.1:5001:5000` and curl `localhost:5001/health`. |
 | Curl reaches the app but receives HTTP 404 | Flask answers at the published port with a route error. | Request the exact `/health` path on the container running the provided app. |
 
-## 5. Push and check GitHub Actions
+## 5. GitHub Actions and publishing your own copy
 
-Create a second empty GitHub repository named `assignment-2-docker-ci`. Use visibility that lets your instructor see your work. Commit the README and its screenshot together so the image displays on GitHub.
+If you downloaded the ZIP to run the app locally, you can skip the publishing commands. To view the original repository’s CI runs, open its **Actions** tab on GitHub.
+
+If you want to publish your own copy from the downloaded ZIP, create an empty GitHub repository named `assignment-2-docker-ci`. Commit the README and its screenshot together so the image displays on GitHub.
 
 ```bash
 git init -b main
